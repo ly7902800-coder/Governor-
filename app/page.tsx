@@ -367,9 +367,9 @@ export default function HomePage() {
           setProvider(parsed.provider);
         }
         if (Array.isArray(parsed.aiMessages)) {
-          setAiMessages(parsed.aiMessages.filter((item: any) =>
+          setAiMessages(parsed.aiMessages.filter((item) =>
             item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string"
-          ).slice(-40));
+          ).slice(-40).map((item) => ({ role: item.role as "user" | "assistant", content: item.content })));
         }
         setActiveFile("lib/main.dart");
         setSaved(false);
@@ -491,7 +491,7 @@ export default function HomePage() {
       if (!response.ok) throw new Error(data.error || "AI request failed");
       const answer = "Provider: " + (data.provider || "AI") + "\n\n" + (data.text || "The provider returned an empty response.");
       setAiResult(answer);
-      setAiMessages((current) => [...current, { role: "user", content: userMessage }, { role: "assistant", content: answer }].slice(-40));
+      setAiMessages((current) => [...current, { role: "user" as const, content: userMessage }, { role: "assistant" as const, content: answer }].slice(-40));
       setPrompt("");
       setStatus("AI response received; project files were preserved");
     } catch (error) {
