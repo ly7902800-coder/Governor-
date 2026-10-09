@@ -302,6 +302,7 @@ export default function HomePage() {
       localStorage.setItem("governor-ai-messages-v1", JSON.stringify(aiMessages.slice(-40)));
       localStorage.setItem("governor-ai-provider-v1", provider);
       setSaved(true);
+      setStatus("Autosaved on this device");
     } catch {
       setStatus("Browser storage is full or unavailable; export your project as a backup");
     }
