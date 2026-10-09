@@ -4,7 +4,7 @@ export const runtime = "nodejs";
 
 type Provider = "openrouter" | "openai" | "gemini" | "anthropic";
 
-const systemPrompt = "You are a careful Flutter and Dart coding assistant. Explain changes clearly. Do not claim to have edited files; return suggested code or steps only.";
+const systemPrompt = `You are Governor Studio, an AI coding agent for Flutter/Dart projects. Inspect the supplied workspace map (file paths and contents) and fulfill the user request. When the user asks to implement, edit, fix, create, or refactor code, return ONLY one valid JSON object with this exact shape: {"message":"brief summary of what you changed","files":{"relative/path.dart":"complete new file contents"}}. Include only files that need changes, but provide the COMPLETE contents for each changed file. You may add new files using safe relative paths. Never use Markdown fences around JSON. If no file change is needed, return {"message":"your answer","files":{}}. Never invent that a build/test ran. Keep changes focused and preserve unrelated files. Do not include secrets in generated files.`;
 
 async function callOpenRouter(prompt: string, code: string) {
   const key = process.env.OPENROUTER_API_KEY;
@@ -21,7 +21,7 @@ async function callOpenRouter(prompt: string, code: string) {
       model: process.env.OPENROUTER_MODEL || "openrouter/free",
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Request:\n${prompt}\n\nCurrent Dart source:\n${code}` },
+        { role: "user", content: `Request:\n${prompt}\n\nCurrent project workspace (JSON object mapping relative file paths to full contents):\n${code}` },
       ],
       temperature: 0.2,
     }),
@@ -41,7 +41,7 @@ async function callOpenAI(prompt: string, code: string) {
       model: process.env.OPENAI_MODEL || "gpt-4o-mini",
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Request:\n${prompt}\n\nCurrent Dart source:\n${code}` }
+        { role: "user", content: `Request:\n${prompt}\n\nCurrent project workspace (JSON object mapping relative file paths to full contents):\n${code}` }
       ],
       temperature: 0.2
     })
@@ -58,7 +58,7 @@ async function callGemini(prompt: string, code: string) {
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts: [{ text: `You are a careful Flutter/Dart coding assistant.\nRequest: ${prompt}\n\nCurrent Dart source:\n${code}` }] }] })
+    body: JSON.stringify({ contents: [{ parts: [{ text: `You are a careful Flutter/Dart coding assistant.\nRequest: ${prompt}\n\nCurrent project workspace (JSON object mapping relative file paths to full contents):\n${code}` }] }] })
   });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error?.message || "Gemini request failed.");
@@ -74,7 +74,7 @@ async function callAnthropic(prompt: string, code: string) {
     body: JSON.stringify({
       model: process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest",
       max_tokens: 1800,
-      messages: [{ role: "user", content: `You are a careful Flutter/Dart coding assistant.\nRequest: ${prompt}\n\nCurrent Dart source:\n${code}` }]
+      messages: [{ role: "user", content: `You are a careful Flutter/Dart coding assistant.\nRequest: ${prompt}\n\nCurrent project workspace (JSON object mapping relative file paths to full contents):\n${code}` }]
     })
   });
   const data = await response.json();
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const prompt = typeof body.prompt === "string" ? body.prompt.trim().slice(0, 6000) : "";
-    const code = typeof body.code === "string" ? body.code.slice(0, 30000) : "";
+    const code = typeof body.code === "string" ? body.code.slice(0, 60000) : "";
     const requested = body.provider as Provider | "auto";
     const history: Array<{ role: "user" | "assistant"; content: string }> = Array.isArray(body.history)
       ? body.history
