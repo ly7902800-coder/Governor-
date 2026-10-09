@@ -29,7 +29,7 @@ Runtime environment:
 - Optional `RUNTIME_WORK_DIR`: writable workspace root; defaults to `/tmp/governor-runtime`.
 - Optional `PORT`: defaults to `8090`.
 
-The service provides `GET /health`, `POST /build/web`, and `POST /build/apk`. Build endpoints require `X-Runtime-Token`, validate relative file paths and project size, and execute Flutter in a disposable workspace. The web build output is retained for browser preview. Set a platform-level request timeout long enough for Flutter compilation.
+The service provides `GET /health`, `POST /build/web`, and `POST /build/apk`. The health endpoint reports readiness only when the Flutter CLI responds, the shared secret is configured, and `PUBLIC_RUNTIME_URL` is HTTPS; inspect its JSON fields after deployment. Build endpoints require `X-Runtime-Token`, validate relative file paths and project size, and execute Flutter in a disposable workspace. Preview builds older than 24 hours are removed when a new web build starts. Set a platform-level request timeout long enough for Flutter compilation.
 
 After the service is deployed, set its HTTPS origin as `FLUTTER_RUNTIME_URL` on the Next.js app and redeploy that app.
 
