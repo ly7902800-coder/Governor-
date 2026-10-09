@@ -32,6 +32,7 @@ export async function db() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         UNIQUE(provider, provider_id)
       );
+      ALTER TABLE governor_users ADD COLUMN IF NOT EXISTS session_version INTEGER NOT NULL DEFAULT 0;
       CREATE TABLE IF NOT EXISTS governor_projects (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL REFERENCES governor_users(id) ON DELETE CASCADE,
@@ -87,9 +88,9 @@ export async function verifyPassword(password: string, stored: string) {
   const actual = await scrypt(password, salt, expected.length) as Buffer;
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
-export function makeSession(userId: string) {
+export function makeSession(userId: string, sessionVersion = 0) {
   const secret = requireSessionSecret();
-  const payload = Buffer.from(JSON.stringify({ sub: userId, exp: Date.now() + 1000 * 60 * 60 * 24 * 14 })).toString("base64url");
+  const payload = Buffer.from(JSON.stringify({ sub: userId, ver: sessionVersion, exp: Date.now() + 1000 * 60 * 60 * 24 * 14 })).toString("base64url");
   const signature = createHmac("sha256", secret).update(payload).digest("base64url");
   return `${payload}.${signature}`;
 }
@@ -100,9 +101,9 @@ export function readSession(token: string | undefined) {
     if (!payload || !signature) return null;
     const expected = createHmac("sha256", requireSessionSecret()).update(payload).digest("base64url");
     if (!safeEqual(signature, expected)) return null;
-    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { sub?: string; exp?: number };
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { sub?: string; ver?: number; exp?: number };
     if (!data.sub || !data.exp || data.exp < Date.now()) return null;
-    return { userId: data.sub };
+    return { userId: data.sub, sessionVersion: data.ver ?? 0 };
   } catch { return null; }
 }
 export async function currentUser() {
@@ -111,10 +112,11 @@ export async function currentUser() {
   if (!session) return null;
   const database = await db();
   const result = await database.query(
-    "SELECT id, email, display_name, provider, email_verified, created_at FROM governor_users WHERE id = $1",
+    "SELECT id, email, display_name, provider, email_verified, created_at, session_version FROM governor_users WHERE id = $1",
     [session.userId],
   );
-  return result.rows[0] ?? null;
+  if (!result.rows[0] || result.rows[0].session_version !== session.sessionVersion) return null;
+  return result.rows[0];
 }
 export function sessionCookie(token: string) {
   return { name: "governor_session", value: token, httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/", maxAge: 60 * 60 * 24 * 14 };
