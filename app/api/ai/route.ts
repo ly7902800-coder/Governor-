@@ -106,7 +106,25 @@ export async function POST(request: Request) {
     const prompt = typeof body.prompt === "string" ? body.prompt.trim().slice(0, 6000) : "";
     const code = typeof body.code === "string" ? body.code.slice(0, 30000) : "";
     const requested = body.provider as Provider | "auto";
+    const history: Array<{ role: "user" | "assistant"; content: string }> = Array.isArray(body.history)
+      ? body.history
+          .filter((item: unknown) => {
+            if (!item || typeof item !== "object") return false;
+            const message = item as { role?: unknown; content?: unknown };
+            return (message.role === "user" || message.role === "assistant") && typeof message.content === "string";
+          })
+          .slice(-16)
+          .map((item: { role: "user" | "assistant"; content: string }) => ({
+            role: item.role,
+            content: item.content.slice(0, 6000),
+          }))
+      : [];
     if (!prompt) return NextResponse.json({ error: "Enter a prompt first." }, { status: 400 });
+    const conversationPrompt = history.length
+      ? "Recent conversation (preserve its context when answering):\\n" +
+        history.map((item) => `${item.role.toUpperCase()}: ${item.content}`).join("\\n\\n") +
+        "\\n\\nCurrent request:\\n" + prompt
+      : prompt;
 
     const providers: Provider[] = requested === "openrouter" || requested === "openai" || requested === "gemini" || requested === "anthropic"
       ? [requested]
