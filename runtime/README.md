@@ -9,6 +9,7 @@ Configure these on the Next.js hosting provider (not as GitHub Actions secrets a
 - `DATABASE_URL`: a PostgreSQL connection string from your database host. The application creates its account/project tables on first use.
 - `SESSION_SECRET`: a cryptographically random secret of at least 32 characters.
 - `APP_BASE_URL`: public HTTPS origin of Governor Studio, with no trailing slash.
+- `RESEND_API_KEY` and `EMAIL_FROM`: email verification and password recovery mail delivery.
 - `FLUTTER_RUNTIME_URL`: public HTTPS origin of the separately deployed runtime service.
 - `RUNTIME_SHARED_SECRET`: the same random secret as the runtime service, at least 32 characters.
 - `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`: only the providers the platform chooses to enable.
@@ -45,7 +46,7 @@ Replace `YOUR_GOVERNOR_DOMAIN` with the actual public hostname and set `APP_BASE
 
 - Email registration and login use PostgreSQL-backed users, scrypt password hashes, and signed HttpOnly session cookies.
 - Google/GitHub OAuth requires the configuration above.
-- Email verification delivery and password-reset email flows are not implemented yet. New email/password accounts are marked unverified. Do not use this as a sensitive production identity service until verification, recovery, rate limiting, and monitoring are added.
+- Email verification and password-reset links use the configured Resend email delivery provider. New email/password accounts cannot sign in until verified. Ensure the sender domain is verified in Resend. Add edge-level abuse protection and monitoring before a large public launch.
 - Cloud projects are private to the authenticated user and stored in PostgreSQL.
 - AI requests still require the platform administrator to configure at least one provider key.
 - The runtime service can compile actual Flutter Web previews and APKs from the submitted workspace once deployed and reachable.
