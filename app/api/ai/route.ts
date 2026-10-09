@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { currentUser, claimUsage } from "../../../lib/server";
 
 export const runtime = "nodejs";
 
@@ -102,6 +103,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const user = await currentUser();
+    if (!user) return NextResponse.json({ error: "Sign in to use the shared AI providers." }, { status: 401 });
+    await claimUsage(user.id, "ai", 60, 15);
     const body = await request.json();
     const prompt = typeof body.prompt === "string" ? body.prompt.trim().slice(0, 6000) : "";
     const code = typeof body.code === "string" ? body.code.slice(0, 60000) : "";
@@ -143,7 +147,8 @@ export async function POST(request: Request) {
       }
     }
     return NextResponse.json({ error: failures.join(" | ") || "No AI provider is configured." }, { status: 503 });
-  } catch {
-    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  } catch (error) {
+    if (error instanceof Error && error.message === "RATE_LIMITED") return NextResponse.json({ error: "AI request limit reached. Please wait a minute." }, { status: 429 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid request." }, { status: 400 });
   }
 }
