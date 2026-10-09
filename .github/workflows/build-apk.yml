@@ -31,7 +31,7 @@ jobs:
         run: flutter --version
 
       - name: Generate Android platform files
-        run: flutter create --platforms=android --project-name governor_studio_app .
+        run: flutter create --platforms=android --project-name cloud_flutter_studio_starter .
 
       - name: Resolve dependencies
         run: flutter pub get
