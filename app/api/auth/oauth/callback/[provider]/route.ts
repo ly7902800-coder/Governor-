@@ -49,18 +49,20 @@ export async function GET(request: Request, context: { params: Promise<{ provide
     if (!email || !verified || !providerId) return fail("A verified email is required for sign-in.");
     if (!process.env.DATABASE_URL || !process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) return fail("Account database or session secret is not configured.");
     const database = await db();
-    const found = await database.query("SELECT id,provider,provider_id FROM governor_users WHERE email=$1 OR (provider=$2 AND provider_id=$3) LIMIT 1",[email,provider,providerId]);
+    const found = await database.query("SELECT id,provider,provider_id,session_version FROM governor_users WHERE email=$1 OR (provider=$2 AND provider_id=$3) LIMIT 1",[email,provider,providerId]);
     let userId: string;
+    let sessionVersion = 0;
     if (found.rows[0]) {
       if (found.rows[0].provider !== provider || found.rows[0].provider_id !== providerId) return fail("This email already belongs to another sign-in method. Sign in with that method first.");
       userId = found.rows[0].id;
+      sessionVersion = Number(found.rows[0].session_version || 0);
       await database.query("UPDATE governor_users SET display_name=$1,email_verified=TRUE WHERE id=$2",[displayName,userId]);
     } else {
       userId = randomUUID();
       await database.query("INSERT INTO governor_users (id,email,display_name,provider,provider_id,email_verified) VALUES ($1,$2,$3,$4,$5,TRUE)",[userId,email,displayName,provider,providerId]);
     }
     const response = NextResponse.redirect(new URL("/account?connected=" + provider,base));
-    response.cookies.set(sessionCookie(makeSession(userId)));
+    response.cookies.set(sessionCookie(makeSession(userId, sessionVersion)));
     response.cookies.set("governor_oauth_state","",{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:0});
     response.cookies.set("governor_oauth_provider","",{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:0});
     return response;
