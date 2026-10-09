@@ -40,7 +40,7 @@ export async function db() {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS governor_projects_user_updated ON governor_projects(user_id, updated_at DESC);
-      CREATE TABLE IF NOT EXISTS governor_usage_limits (
+      CREATE TABLE IF NOT EXISTS governor_email_tokens (\n        id TEXT PRIMARY KEY,\n        user_id TEXT NOT NULL REFERENCES governor_users(id) ON DELETE CASCADE,\n        token_hash TEXT UNIQUE NOT NULL,\n        purpose TEXT NOT NULL CHECK (purpose IN ('verify_email', 'password_reset')),\n        expires_at TIMESTAMPTZ NOT NULL,\n        used_at TIMESTAMPTZ,\n        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n      );\n      CREATE INDEX IF NOT EXISTS governor_email_tokens_user_purpose ON governor_email_tokens(user_id, purpose, expires_at DESC);\n      CREATE TABLE IF NOT EXISTS governor_usage_limits (
         user_id TEXT NOT NULL REFERENCES governor_users(id) ON DELETE CASCADE,
         action TEXT NOT NULL,
         window_start TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -149,4 +149,22 @@ export async function claimUsage(userId: string, action: "ai" | "flutter-build",
     [userId, action, windowSeconds, maxCount],
   );
   if (!result.rows[0]) throw new Error("RATE_LIMITED");
+}
+
+export async function sendPlatformEmail(to: string, subject: string, html: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.EMAIL_FROM;
+  if (!apiKey || !from) throw new Error("Email delivery is not configured. Set RESEND_API_KEY and EMAIL_FROM on the web server.");
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to: [to], subject, html }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({})) as { message?: string };
+    throw new Error(data.message || "Email delivery provider rejected the message.");
+  }
+}
+export function escapeHtml(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/\x27/g, "&#39;");
 }
