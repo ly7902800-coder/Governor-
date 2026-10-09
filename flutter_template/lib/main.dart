@@ -8,7 +8,7 @@ class StudioStarterApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Cloud Flutter Studio',
+      title: 'Governor Studio',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -28,7 +28,7 @@ class StarterHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My Flutter App')),
+      appBar: AppBar(title: const Text('Governor Starter App')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -42,13 +42,13 @@ class StarterHomePage extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Text(
-                'Built in Cloud Flutter Studio',
+                'Built in Governor Studio',
                 style: Theme.of(context).textTheme.headlineSmall,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               const Text(
-                'This is a real Flutter starter app. Edit the source and run the cloud APK workflow.',
+                'This APK was built from the Flutter source in Governor Studio.',
                 textAlign: TextAlign.center,
               ),
             ],
