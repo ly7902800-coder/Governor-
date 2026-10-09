@@ -40,7 +40,17 @@ export async function db() {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS governor_projects_user_updated ON governor_projects(user_id, updated_at DESC);
-      CREATE TABLE IF NOT EXISTS governor_email_tokens (\n        id TEXT PRIMARY KEY,\n        user_id TEXT NOT NULL REFERENCES governor_users(id) ON DELETE CASCADE,\n        token_hash TEXT UNIQUE NOT NULL,\n        purpose TEXT NOT NULL CHECK (purpose IN ('verify_email', 'password_reset')),\n        expires_at TIMESTAMPTZ NOT NULL,\n        used_at TIMESTAMPTZ,\n        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n      );\n      CREATE INDEX IF NOT EXISTS governor_email_tokens_user_purpose ON governor_email_tokens(user_id, purpose, expires_at DESC);\n      CREATE TABLE IF NOT EXISTS governor_usage_limits (
+      CREATE TABLE IF NOT EXISTS governor_email_tokens (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES governor_users(id) ON DELETE CASCADE,
+        token_hash TEXT UNIQUE NOT NULL,
+        purpose TEXT NOT NULL CHECK (purpose IN ('verify_email', 'password_reset')),
+        expires_at TIMESTAMPTZ NOT NULL,
+        used_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS governor_email_tokens_user_purpose ON governor_email_tokens(user_id, purpose, expires_at DESC);
+      CREATE TABLE IF NOT EXISTS governor_usage_limits (
         user_id TEXT NOT NULL REFERENCES governor_users(id) ON DELETE CASCADE,
         action TEXT NOT NULL,
         window_start TIMESTAMPTZ NOT NULL DEFAULT NOW(),
