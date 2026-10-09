@@ -74,12 +74,46 @@ def run(command, cwd: Path, timeout=480):
 
 @app.get("/health")
 def health():
-    return {"ok": True, "flutter": True}
+    flutter_path = shutil.which("flutter")
+    secret_ready = bool(TOKEN and len(TOKEN) >= 32)
+    public_url_ready = bool(PUBLIC_URL.startswith("https://"))
+    version = None
+    if flutter_path:
+        try:
+            check = subprocess.run(
+                [flutter_path, "--version", "--machine"],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                timeout=8,
+                check=False,
+            )
+            if check.returncode == 0:
+                metadata = json.loads(check.stdout or "{}")
+                version = metadata.get("frameworkVersion")
+        except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
+            version = None
+    ready = bool(flutter_path and version and secret_ready and public_url_ready)
+    return {
+        "ok": ready,
+        "flutter": bool(flutter_path and version),
+        "flutterVersion": version,
+        "sharedSecretConfigured": secret_ready,
+        "publicHttpsUrlConfigured": public_url_ready,
+    }
 
 @app.post("/build/web")
 def build_web(body: BuildRequest, x_runtime_token: str | None = Header(default=None)):
     authorize(x_runtime_token)
     files = clean_files(body.files)
+    # Keep preview storage bounded: discard preview builds older than 24 hours.
+    cutoff = __import__("time").time() - 24 * 60 * 60
+    for old_preview in PREVIEWS.iterdir():
+        try:
+            if old_preview.is_dir() and old_preview.stat().st_mtime < cutoff:
+                shutil.rmtree(old_preview, ignore_errors=True)
+        except OSError:
+            continue
     build_id = secrets.token_urlsafe(18)
     with tempfile.TemporaryDirectory(prefix="gov-web-") as tmp:
         work = Path(tmp) / "project"
