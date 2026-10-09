@@ -1,7 +1,8 @@
 import os, re, json, shutil, tempfile, subprocess, secrets
 from pathlib import Path
 from fastapi import FastAPI, Header, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 from pydantic import BaseModel
 
 app = FastAPI(title="Governor Flutter Runtime", docs_url=None, redoc_url=None)
@@ -74,13 +75,14 @@ def health():
 def build_web(body: BuildRequest, x_runtime_token: str | None = Header(default=None)):
     authorize(x_runtime_token)
     files = clean_files(body.files)
+    build_id = secrets.token_urlsafe(18)
     with tempfile.TemporaryDirectory(prefix="gov-web-") as tmp:
         work = Path(tmp) / "project"
         work.mkdir()
         prepare(files, work)
+        run(["flutter", "create", "--platforms=web", "--project-name", "governor_generated_app", "."], work, 180)
         run(["flutter", "pub", "get"], work, 180)
-        run(["flutter", "build", "web", "--release"], work, 480)
-        build_id = secrets.token_urlsafe(18)
+        run(["flutter", "build", "web", "--release", "--base-href", f"/preview/{build_id}/"], work, 480)
         target = PREVIEWS / build_id
         shutil.copytree(work / "build" / "web", target)
     if not PUBLIC_URL:
@@ -104,7 +106,7 @@ def build_apk(body: BuildRequest, x_runtime_token: str | None = Header(default=N
         apk = work / "build" / "app" / "outputs" / "flutter-apk" / "app-release.apk"
         if not apk.exists():
             raise HTTPException(500, "Flutter build finished without an APK output.")
-        return FileResponse(apk, media_type="application/vnd.android.package-archive", filename="governor-project-release.apk", background=None)
+        return FileResponse(apk, media_type="application/vnd.android.package-archive", filename="governor-project-release.apk", background=BackgroundTask(shutil.rmtree, tmp, ignore_errors=True))
     finally:
         # Keep temporary directory while FileResponse streams; a system temp cleanup handles it later.
         pass
