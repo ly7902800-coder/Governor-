@@ -14,7 +14,7 @@ export default function AccountPage() {
   const [error,setError] = useState("");
   const [notice,setNotice] = useState("");
   useEffect(()=>{ fetch("/api/auth/session").then(r=>r.json()).then(d=>{setConfigured(d.configured===true);setUser(d.user||null)}).catch(()=>setConfigured(false)); },[]);
-  useEffect(()=>{ const q=new URLSearchParams(window.location.search); if(q.get("error")) setError(q.get("error")||"Sign-in failed."); if(q.get("connected")) setNotice("Connected with "+q.get("connected")+"."); },[]);
+  useEffect(()=>{ const q=new URLSearchParams(window.location.search); if(q.get("error")) setError(q.get("error")||"Sign-in failed."); if(q.get("connected")) setNotice("Connected with "+q.get("connected")+"."); if(q.get("verified")==="1") setNotice("Email verified. You can now sign in."); },[]);
   async function submit(e:React.FormEvent) {
     e.preventDefault(); setBusy(true);setError("");setNotice("");
     try {
