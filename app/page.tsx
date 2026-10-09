@@ -261,6 +261,9 @@ export default function HomePage() {
   const [newFileName, setNewFileName] = useState("");
   const [showNewFile, setShowNewFile] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [provider, setProvider] = useState<"auto" | "openrouter" | "openai" | "gemini" | "anthropic">("auto");
+  const [aiMessages, setAiMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
+  const [importMessage, setImportMessage] = useState("");
 
   useEffect(() => {
     try {
@@ -272,11 +275,36 @@ export default function HomePage() {
           setStatus("Restored saved browser files");
         }
       }
+      const storedMessages = localStorage.getItem("governor-ai-messages-v1");
+      if (storedMessages) {
+        const parsedMessages = JSON.parse(storedMessages);
+        if (Array.isArray(parsedMessages)) {
+          setAiMessages(parsedMessages.filter((item) =>
+            item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string"
+          ).slice(-40));
+        }
+      }
+      const storedProvider = localStorage.getItem("governor-ai-provider-v1");
+      if (storedProvider === "openrouter" || storedProvider === "openai" || storedProvider === "gemini" || storedProvider === "anthropic" || storedProvider === "auto") {
+        setProvider(storedProvider);
+      }
     } catch {
       setStatus("Browser storage unavailable; editing in memory");
     }
     setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem("governor-editor-files-v1", JSON.stringify(files));
+      localStorage.setItem("governor-ai-messages-v1", JSON.stringify(aiMessages.slice(-40)));
+      localStorage.setItem("governor-ai-provider-v1", provider);
+      setSaved(true);
+    } catch {
+      setStatus("Browser storage is full or unavailable; export your project as a backup");
+    }
+  }, [files, aiMessages, provider, hydrated]);
 
   const code = files[activeFile] ?? "";
   const lineCount = useMemo(() => code.split("\n").length, [code]);
@@ -291,11 +319,45 @@ export default function HomePage() {
   function saveLocally() {
     try {
       localStorage.setItem("governor-editor-files-v1", JSON.stringify(files));
+      localStorage.setItem("governor-ai-messages-v1", JSON.stringify(aiMessages.slice(-40)));
+      localStorage.setItem("governor-ai-provider-v1", provider);
       setSaved(true);
-      setStatus("Saved on this device");
+      setStatus("Project and AI conversation saved on this device");
     } catch {
-      setStatus("Could not save to browser storage");
+      setStatus("Could not save; export the project JSON as a backup");
     }
+  }
+
+  function importProject(file?: File) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result)) as { files?: Record<string, unknown> };
+        if (!parsed.files || typeof parsed.files !== "object" || typeof parsed.files["lib/main.dart"] !== "string") {
+          throw new Error("This file is not a valid Governor project backup.");
+        }
+        const nextFiles: Record<string, string> = {};
+        for (const [path, value] of Object.entries(parsed.files)) {
+          if (typeof value !== "string" || !path || path.startsWith("/") || path.split("/").includes("..")) continue;
+          nextFiles[path] = value;
+        }
+        if (!nextFiles["lib/main.dart"]) throw new Error("The backup does not include lib/main.dart.");
+        setFiles({ ...starterFiles, ...nextFiles });
+        if (Array.isArray(parsed.aiMessages)) {
+          setAiMessages(parsed.aiMessages.filter((item: any) =>
+            item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string"
+          ).slice(-40));
+        }
+        setActiveFile("lib/main.dart");
+        setSaved(false);
+        setImportMessage("Project imported. It will autosave in this browser.");
+        setStatus("Project backup imported successfully");
+      } catch (error) {
+        setImportMessage(error instanceof Error ? error.message : "Could not import project.");
+      }
+    };
+    reader.readAsText(file);
   }
 
   function createFile() {
@@ -332,16 +394,23 @@ export default function HomePage() {
   }
 
   function downloadAllFiles() {
-    const bundle = Object.entries(files).map(([path, value]) => "// ===== " + path + " =====\n" + value).join("\n\n");
-    const url = URL.createObjectURL(new Blob([bundle], { type: "text/plain;charset=utf-8" }));
+    const bundle = JSON.stringify({
+      format: "governor-project",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      files,
+      aiMessages: aiMessages.slice(-40),
+      provider,
+    }, null, 2);
+    const url = URL.createObjectURL(new Blob([bundle], { type: "application/json;charset=utf-8" }));
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = "governor-workspace.txt";
+    anchor.download = "governor-project.json";
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(url);
-    setStatus("Exported all workspace files into one text file");
+    setStatus("Exported complete project backup as JSON");
   }
 
   function downloadFile() {
@@ -385,19 +454,24 @@ export default function HomePage() {
     setBusy(true);
     setAiResult("");
     try {
+      const userMessage = prompt.trim() + "\nPlease focus on the currently open file: " + activeFile;
       const response = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: prompt.trim() + "\nPlease focus on the currently open file: " + activeFile,
+          prompt: userMessage,
           code,
-          provider: "auto",
+          provider,
+          history: aiMessages.slice(-16),
         }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "AI request failed");
-      setAiResult("Provider: " + (data.provider || "AI") + "\n\n" + (data.text || "The provider returned an empty response."));
-      setStatus("AI response received");
+      const answer = "Provider: " + (data.provider || "AI") + "\n\n" + (data.text || "The provider returned an empty response.");
+      setAiResult(answer);
+      setAiMessages((current) => [...current, { role: "user", content: userMessage }, { role: "assistant", content: answer }].slice(-40));
+      setPrompt("");
+      setStatus("AI response received; project files were preserved");
     } catch (error) {
       setAiResult(error instanceof Error ? error.message : "Could not reach the AI endpoint.");
       setStatus("AI request failed");
@@ -421,9 +495,10 @@ export default function HomePage() {
         <aside className="panel files-panel">
           <div className="panel-head"><span><FolderTree size={15} style={{display:"inline",marginRight:7,verticalAlign:"middle"}}/>Explorer</span><span className="panel-sub">{fileCount} files</span></div>
           <div className="explorer-actions">
-            <button className="btn primary" onClick={createLoginApp} title="Create a no-key login UI prototype"><ShieldCheck size={14}/> Login starter</button>
+            <button className="btn primary" onClick={createLoginApp} title="Insert a login UI starter (real providers need app configuration)"><ShieldCheck size={14}/> Login UI starter</button>
             <button className="btn" onClick={() => setShowNewFile((value) => !value)}><FileCode2 size={14}/> New file</button>
-            <button className="btn" onClick={downloadAllFiles}><Download size={14}/> Export all</button>
+            <button className="btn" onClick={downloadAllFiles}><Download size={14}/> Backup project</button>
+            <label className="btn import-project-btn"><Download size={14}/> Import backup<input type="file" accept="application/json,.json" onChange={(event) => { importProject(event.target.files?.[0]); event.currentTarget.value = ""; }} /></label>
           </div>
           {showNewFile && <form className="new-file-form" onSubmit={(event) => { event.preventDefault(); createFile(); }}>
             <label htmlFor="new-file-name">File path</label>
@@ -434,7 +509,8 @@ export default function HomePage() {
           <div className="file-list">
             {Object.keys(files).map((path) => <button key={path} className={activeFile === path ? "file-item active" : "file-item"} onClick={() => setActiveFile(path)} title={path}>{path.endsWith(".dart") ? <Braces size={15}/> : <FileText size={15}/>} {path.split("/").pop()}</button>)}
           </div>
-          <div className="side-note"><strong>Workspace</strong><br/>{status}<br/><br/>Files are saved in this browser only. They are not yet synchronized back to GitHub automatically. Login starter creates a preview-only form; it does not authenticate real accounts.</div>
+          <div className="side-note"><strong>Workspace</strong><br/>{status}<br/><br/>Autosave stores project files on this device. Use Backup project to keep a portable JSON copy. AI provider switching preserves this workspace and the recent conversation. Login UI starter is not real authentication until a provider is configured.</div>
+          {importMessage && <div className="side-note" role="status">{importMessage}</div>}
           <div className="explorer-actions">
             <button className="btn" onClick={saveLocally}><Save size={14}/> Save workspace</button>
           </div>
@@ -503,13 +579,24 @@ export default function HomePage() {
           <LivePreview code={code} fileName={activeFile} />
           <div className="ai-box">
             <div style={{fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:7}}><Sparkles size={15}/> AI code assistant</div>
+            <label className="ai-provider-label">AI provider
+              <select value={provider} onChange={(event) => setProvider(event.target.value as typeof provider)} aria-label="AI provider">
+                <option value="auto">Auto (try configured providers)</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="openai">OpenAI</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="anthropic">Anthropic Claude</option>
+              </select>
+            </label>
+            <p className="ai-context-note">Switching providers keeps your files and conversation. A provider must be configured securely on the server before requests can work.</p>
             <textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Ask AI to explain or improve the open file…" />
             <button className="btn primary" onClick={askAI} disabled={busy || !prompt.trim()}>{busy ? "Thinking…" : "Ask AI about this file"}</button>
+            {aiMessages.length > 0 && <div className="ai-history">{aiMessages.slice(-8).map((message, index) => <div key={index} className={"ai-history-message " + message.role}><strong>{message.role === "user" ? "You" : "AI"}</strong><span>{message.content}</span></div>)}</div>}
             {aiResult && <div className="ai-result">{aiResult}</div>}
           </div>
         </section>
       </section>
-      <div className="footer-note">Governor Studio · Monaco editor · Local browser saving · APK builds run through GitHub Actions. API keys must stay in server-side environment variables.</div>
+      <div className="footer-note">Governor Studio · Monaco editor · Automatic local project saving · JSON backup/import · AI provider selection with conversation continuity · APK builds run through GitHub Actions. True Flutter hot reload and real Google/GitHub authentication still require connected runtime/provider configuration.</div>
     </main>
   );
 }
