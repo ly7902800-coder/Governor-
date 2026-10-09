@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+dist/
+coverage/
+.env
+.env.local
+.env.*.local
+!.env.example
+.DS_Store
+*.log
+flutter_template/.dart_tool/
+flutter_template/build/
+flutter_template/.packages
+flutter_template/pubspec.lock
