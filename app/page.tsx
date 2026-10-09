@@ -144,7 +144,7 @@ export default function HomePage() {
   }
 
   function createFile() {
-    const path = newFileName.trim().replace(/^\\/+/, "");
+    const path = newFileName.trim().replace(/^\/+/, "");
     if (!path || path.includes("..") || path.endsWith("/")) {
       setStatus("Enter a valid file path, for example lib/home.dart");
       return;
@@ -411,7 +411,7 @@ export default function HomePage() {
   }
 
   function createFile() {
-    const path = newFileName.trim().replace(/^\\/+/, "");
+    const path = newFileName.trim().replace(/^\/+/, "");
     if (!path || path.includes("..") || path.endsWith("/")) {
       setStatus("Enter a valid file path, for example lib/home.dart");
       return;
