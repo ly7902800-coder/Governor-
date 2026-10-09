@@ -483,18 +483,50 @@ export default function HomePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: userMessage,
-          code,
+          code: JSON.stringify(files),
           provider,
           history: aiMessages.slice(-16),
         }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "AI request failed");
-      const answer = "Provider: " + (data.provider || "AI") + "\n\n" + (data.text || "The provider returned an empty response.");
+      const rawText = typeof data.text === "string" ? data.text : "";
+      let displayMessage = rawText || "The provider returned an empty response.";
+      let changedPaths: string[] = [];
+      try {
+        const normalized = rawText.trim().replace(/^\x60{3}(?:json)?\s*/i, "").replace(/\s*\x60{3}$/, "");
+        const parsed = JSON.parse(normalized) as { message?: unknown; files?: Record<string, unknown> };
+        if (parsed && typeof parsed === "object") {
+          if (typeof parsed.message === "string") displayMessage = parsed.message;
+          if (parsed.files && typeof parsed.files === "object" && !Array.isArray(parsed.files)) {
+            const accepted: Record<string, string> = {};
+            for (const [path, contents] of Object.entries(parsed.files)) {
+              const safePath = path.trim().replace(/^\/+/, "");
+              if (!safePath || safePath.split("/").includes("..") || safePath.endsWith("/") || typeof contents !== "string") continue;
+              if (safePath.length > 180 || contents.length > 50000) continue;
+              accepted[safePath] = contents;
+            }
+            changedPaths = Object.keys(accepted);
+            if (changedPaths.length) {
+              setFiles((current) => ({ ...current, ...accepted }));
+              if (accepted[activeFile] !== undefined) {
+                setStatus("AI updated " + changedPaths.length + " project file(s); preview refreshed");
+              } else {
+                setStatus("AI updated " + changedPaths.length + " project file(s)");
+              }
+              setSaved(false);
+            }
+          }
+        }
+      } catch {
+        // Older or non-compliant providers may return plain text; show it without applying edits.
+      }
+      const answer = "Provider: " + (data.provider || "AI") + "\n\n" + displayMessage +
+        (changedPaths.length ? "\n\nUpdated files:\n" + changedPaths.map((path) => "• " + path).join("\n") : "");
       setAiResult(answer);
       setAiMessages((current) => [...current, { role: "user" as const, content: userMessage }, { role: "assistant" as const, content: answer }].slice(-40));
       setPrompt("");
-      setStatus("AI response received; project files were preserved");
+      if (!changedPaths.length) setStatus("AI response received; no files were changed");
     } catch (error) {
       setAiResult(error instanceof Error ? error.message : "Could not reach the AI endpoint.");
       setStatus("AI request failed");
