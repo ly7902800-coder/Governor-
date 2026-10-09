@@ -82,6 +82,24 @@ async function callAnthropic(prompt: string, code: string) {
   return data.content?.map((part: { text?: string }) => part.text || "").join("\n") || "";
 }
 
+const providerStatus = {
+  openrouter: Boolean(process.env.OPENROUTER_API_KEY),
+  openai: Boolean(process.env.OPENAI_API_KEY),
+  gemini: Boolean(process.env.GEMINI_API_KEY),
+  anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
+};
+
+export async function GET() {
+  return NextResponse.json({
+    providers: [
+      { id: "openrouter", name: "OpenRouter", configured: providerStatus.openrouter, model: process.env.OPENROUTER_MODEL || "openrouter/free" },
+      { id: "openai", name: "OpenAI", configured: providerStatus.openai, model: process.env.OPENAI_MODEL || "gpt-4o-mini" },
+      { id: "gemini", name: "Google Gemini", configured: providerStatus.gemini, model: process.env.GEMINI_MODEL || "gemini-2.0-flash" },
+      { id: "anthropic", name: "Anthropic Claude", configured: providerStatus.anthropic, model: process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest" },
+    ],
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -97,10 +115,10 @@ export async function POST(request: Request) {
     const failures: string[] = [];
     for (const provider of providers) {
       try {
-        const text = provider === "openrouter" ? await callOpenRouter(prompt, code)
-          : provider === "openai" ? await callOpenAI(prompt, code)
-          : provider === "gemini" ? await callGemini(prompt, code)
-          : await callAnthropic(prompt, code);
+        const text = provider === "openrouter" ? await callOpenRouter(conversationPrompt, code)
+          : provider === "openai" ? await callOpenAI(conversationPrompt, code)
+          : provider === "gemini" ? await callGemini(conversationPrompt, code)
+          : await callAnthropic(conversationPrompt, code);
         return NextResponse.json({ provider, text });
       } catch (error) {
         failures.push(error instanceof Error ? error.message : String(error));
