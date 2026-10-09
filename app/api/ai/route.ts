@@ -2,7 +2,34 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-type Provider = "openai" | "gemini" | "anthropic";
+type Provider = "openrouter" | "openai" | "gemini" | "anthropic";
+
+const systemPrompt = "You are a careful Flutter and Dart coding assistant. Explain changes clearly. Do not claim to have edited files; return suggested code or steps only.";
+
+async function callOpenRouter(prompt: string, code: string) {
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) throw new Error("OPENROUTER_API_KEY is not configured in the deployment environment.");
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": process.env.OPENROUTER_SITE_URL || "https://github.com/ly7902800-coder/Governor-",
+      "X-Title": process.env.OPENROUTER_APP_NAME || "Cloud Flutter Studio",
+    },
+    body: JSON.stringify({
+      model: process.env.OPENROUTER_MODEL || "openrouter/free",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Request:\n${prompt}\n\nCurrent Dart source:\n${code}` },
+      ],
+      temperature: 0.2,
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error?.message || `OpenRouter request failed (HTTP ${response.status}).`);
+  return data.choices?.[0]?.message?.content || "";
+}
 
 async function callOpenAI(prompt: string, code: string) {
   const key = process.env.OPENAI_API_KEY;
@@ -13,7 +40,7 @@ async function callOpenAI(prompt: string, code: string) {
     body: JSON.stringify({
       model: process.env.OPENAI_MODEL || "gpt-4o-mini",
       messages: [
-        { role: "system", content: "You are a careful Flutter and Dart coding assistant. Explain changes clearly. Do not claim to have edited files; return suggested code or steps only." },
+        { role: "system", content: systemPrompt },
         { role: "user", content: `Request:\n${prompt}\n\nCurrent Dart source:\n${code}` }
       ],
       temperature: 0.2
@@ -63,14 +90,15 @@ export async function POST(request: Request) {
     const requested = body.provider as Provider | "auto";
     if (!prompt) return NextResponse.json({ error: "Enter a prompt first." }, { status: 400 });
 
-    const providers: Provider[] = requested === "openai" || requested === "gemini" || requested === "anthropic"
+    const providers: Provider[] = requested === "openrouter" || requested === "openai" || requested === "gemini" || requested === "anthropic"
       ? [requested]
-      : ["openai", "gemini", "anthropic"];
+      : ["openrouter", "openai", "gemini", "anthropic"];
 
     const failures: string[] = [];
     for (const provider of providers) {
       try {
-        const text = provider === "openai" ? await callOpenAI(prompt, code)
+        const text = provider === "openrouter" ? await callOpenRouter(prompt, code)
+          : provider === "openai" ? await callOpenAI(prompt, code)
           : provider === "gemini" ? await callGemini(prompt, code)
           : await callAnthropic(prompt, code);
         return NextResponse.json({ provider, text });
