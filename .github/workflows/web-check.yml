@@ -36,6 +36,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Check Flutter runtime Python syntax
+        run: python3 -m py_compile runtime/server.py
       - name: Install dependencies
         run: npm install
       - name: TypeScript check
