@@ -140,6 +140,52 @@ export default function HomePage() {
     }
   }
 
+  function createFile() {
+    const path = newFileName.trim().replace(/^\\/+/, "");
+    if (!path || path.includes("..") || path.endsWith("/")) {
+      setStatus("Enter a valid file path, for example lib/home.dart");
+      return;
+    }
+    if (files[path] !== undefined) {
+      setStatus("A file with that name already exists");
+      return;
+    }
+    setFiles((current) => ({ ...current, [path]: "" }));
+    setActiveFile(path);
+    setNewFileName("");
+    setShowNewFile(false);
+    setSaved(false);
+    setStatus("New file created locally: " + path);
+  }
+
+  function removeActiveFile() {
+    if (starterFiles[activeFile]) {
+      setStatus("Starter files cannot be removed");
+      return;
+    }
+    setFiles((current) => {
+      const next = { ...current };
+      delete next[activeFile];
+      return next;
+    });
+    setActiveFile("lib/main.dart");
+    setSaved(false);
+    setStatus("File removed from local workspace");
+  }
+
+  function downloadAllFiles() {
+    const bundle = Object.entries(files).map(([path, value]) => "// ===== " + path + " =====\n" + value).join("\n\n");
+    const url = URL.createObjectURL(new Blob([bundle], { type: "text/plain;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "governor-workspace.txt";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    setStatus("Exported all workspace files into one text file");
+  }
+
   function downloadFile() {
     const blob = new Blob([code], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
