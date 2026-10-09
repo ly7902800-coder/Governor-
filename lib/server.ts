@@ -116,7 +116,9 @@ export async function currentUser() {
     [session.userId],
   );
   if (!result.rows[0] || result.rows[0].session_version !== session.sessionVersion) return null;
-  return result.rows[0];
+  const user = result.rows[0];
+  delete user.session_version;
+  return user;
 }
 export function sessionCookie(token: string) {
   return { name: "governor_session", value: token, httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/", maxAge: 60 * 60 * 24 * 14 };
