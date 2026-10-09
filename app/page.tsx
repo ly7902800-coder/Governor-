@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import LivePreview from "./components/live-preview";
 import { useEffect, useMemo, useState } from "react";
 import {
   Code2, FolderTree, Smartphone, Sparkles, PackageCheck, Play, Save,
@@ -326,20 +327,8 @@ export default function HomePage() {
         </section>
 
         <section className="panel preview-panel">
-          <div className="panel-head"><span><Smartphone size={15} style={{display:"inline",marginRight:7,verticalAlign:"middle"}}/>App preview</span><span className="panel-sub">Runtime pending</span></div>
-          <div className="preview-body">
-            <div className="phone">
-              <div className="phone-status"><span>9:41</span><span>●●● ▰</span></div>
-              <div className="phone-screen">
-                <span className="demo-label">FLUTTER PROJECT</span>
-                <div className="demo-title">Your app<br/>starts here.</div>
-                <div className="demo-copy">Edit Dart code in the editor, save your source, then build an Android APK with the cloud workflow.</div>
-                <div className="demo-card"><div style={{fontWeight:800,fontSize:12,marginBottom:5}}>Flutter starter</div><div style={{fontSize:10,color:"#747b8d"}}>{activeFile} · {lineCount} lines</div></div>
-                <div className="demo-button"><Play size={12} style={{display:"inline",marginRight:5,verticalAlign:"middle"}}/>APK build workflow</div>
-              </div>
-            </div>
-            <div className="warning"><strong><Play size={13} style={{display:"inline",marginRight:5,verticalAlign:"middle"}}/>Live preview not connected</strong>This phone is a workspace preview, not a running Flutter app. A Flutter Web runtime is still needed for real hot reload.</div>
-          </div>
+          <div className="panel-head"><span><Smartphone size={15} style={{display:"inline",marginRight:7,verticalAlign:"middle"}}/>Live app preview</span><span className="panel-sub">Instant draft</span></div>
+          <LivePreview code={code} fileName={activeFile} />
           <div className="ai-box">
             <div style={{fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:7}}><Sparkles size={15}/> AI code assistant</div>
             <textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Ask AI to explain or improve the open file…" />
