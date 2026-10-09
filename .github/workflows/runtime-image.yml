@@ -29,7 +29,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Normalize image name
         id: image
-        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}/governor-flutter-runtime" >> "$GITHUB_OUTPUT"
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/governor-flutter-runtime" >> "$GITHUB_OUTPUT"
       - name: Build and publish runtime image
         uses: docker/build-push-action@v6
         with:
