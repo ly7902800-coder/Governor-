@@ -1,12 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import LivePreview from "./components/live-preview";
+import RuntimePreview from "./components/runtime-preview";
 import { useEffect, useMemo, useState } from "react";
 import {
   Code2, FolderTree, Smartphone, Sparkles, PackageCheck, Play, Save, ShieldCheck,
   FileCode2, TerminalSquare, ExternalLink, Download, RotateCcw,
-  CheckCircle2, FileText, Braces, ChevronRight
+  CheckCircle2, FileText, Braces, ChevronRight, Cloud, UserRound, Hammer
 } from "lucide-react";
 
 const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
@@ -265,6 +265,9 @@ export default function HomePage() {
   const [aiMessages, setAiMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
   const [importMessage, setImportMessage] = useState("");
   const [providerAvailability, setProviderAvailability] = useState<Record<string, boolean>>({});
+  const [cloudProjectId, setCloudProjectId] = useState("");
+  const [cloudStatus, setCloudStatus] = useState("");
+  const [buildingApk, setBuildingApk] = useState(false);
 
   useEffect(() => {
     try {
@@ -285,6 +288,8 @@ export default function HomePage() {
           ).slice(-40));
         }
       }
+      const storedCloudProject = localStorage.getItem("governor-cloud-project-id-v1");
+      if (storedCloudProject) setCloudProjectId(storedCloudProject);
       const storedProvider = localStorage.getItem("governor-ai-provider-v1");
       if (storedProvider === "openrouter" || storedProvider === "openai" || storedProvider === "gemini" || storedProvider === "anthropic" || storedProvider === "auto") {
         setProvider(storedProvider);
@@ -472,6 +477,79 @@ export default function HomePage() {
     setStatus("Login UI created. Demo only: connect real auth before release.");
   }
 
+  async function saveCloudProject() {
+    setCloudStatus("Saving project to cloud…");
+    try {
+      const response = await fetch("/api/workspace", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: cloudProjectId || undefined, name: "Governor Flutter Project", files }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Cloud save failed.");
+      setCloudProjectId(data.id);
+      localStorage.setItem("governor-cloud-project-id-v1", data.id);
+      setCloudStatus("Cloud project saved at " + new Date(data.savedAt || Date.now()).toLocaleTimeString());
+    } catch (error) {
+      setCloudStatus(error instanceof Error ? error.message : "Cloud save failed.");
+    }
+  }
+
+  async function loadCloudProject() {
+    setCloudStatus("Loading cloud projects…");
+    try {
+      const response = await fetch("/api/workspace");
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load cloud projects.");
+      let project = data.projects?.find((item: { id: string }) => item.id === cloudProjectId) || data.projects?.[0];
+      if (cloudProjectId && !project) {
+        const single = await fetch("/api/workspace/" + encodeURIComponent(cloudProjectId));
+        const singleData = await single.json();
+        if (single.ok) project = singleData.project;
+      }
+      if (!project) throw new Error("No cloud projects found. Save this workspace first.");
+      const projectFiles = typeof project.files === "string" ? JSON.parse(project.files) : project.files;
+      if (!projectFiles || typeof projectFiles !== "object" || typeof projectFiles["lib/main.dart"] !== "string") throw new Error("Cloud project contents are invalid.");
+      setFiles({ ...starterFiles, ...projectFiles });
+      setActiveFile("lib/main.dart");
+      setCloudProjectId(project.id);
+      localStorage.setItem("governor-cloud-project-id-v1", project.id);
+      setCloudStatus("Loaded cloud project: " + (project.name || "Governor Flutter Project"));
+    } catch (error) {
+      setCloudStatus(error instanceof Error ? error.message : "Cloud load failed.");
+    }
+  }
+
+  async function buildWorkspaceApk() {
+    setBuildingApk(true);
+    setCloudStatus("Building APK from current workspace…");
+    try {
+      const response = await fetch("/api/runtime/apk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "APK build failed.");
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "governor-project-release.apk";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setCloudStatus("APK built from the current workspace and downloaded.");
+    } catch (error) {
+      setCloudStatus(error instanceof Error ? error.message : "APK build failed.");
+    } finally {
+      setBuildingApk(false);
+    }
+  }
+
   async function askAI() {
     if (!prompt.trim()) return;
     setBusy(true);
@@ -541,8 +619,12 @@ export default function HomePage() {
         <div className="brand"><span className="brand-mark"><Code2 size={20} /></span><span>Governor Studio</span></div>
         <div className="top-actions">
           <a className="btn" href="/tools"><Sparkles size={14}/> Tools Marketplace</a>
+          <a className="btn" href="/account"><UserRound size={14}/> Account</a>
+          <button className="btn" onClick={saveCloudProject}><Cloud size={14}/> Cloud save</button>
+          <button className="btn" onClick={loadCloudProject}><Cloud size={14}/> Cloud load</button>
           <span className="pill"><span className="dot" /> {hydrated ? (saved ? "Saved locally" : "Unsaved edits") : "Loading workspace"}</span>
-          <a className="btn primary" href="https://github.com/ly7902800-coder/Governor-/actions/workflows/build-apk.yml" target="_blank" rel="noreferrer"><PackageCheck size={15}/> Build APK <ExternalLink size={12}/></a>
+          <button className="btn primary" onClick={buildWorkspaceApk} disabled={buildingApk}><Hammer size={15}/> {buildingApk ? "Building APK…" : "Build this project APK"}</button>
+          <a className="btn" href="https://github.com/ly7902800-coder/Governor-/actions/workflows/build-apk.yml" target="_blank" rel="noreferrer"><PackageCheck size={15}/> Starter APK <ExternalLink size={12}/></a>
         </div>
       </header>
 
@@ -564,7 +646,8 @@ export default function HomePage() {
           <div className="file-list">
             {Object.keys(files).map((path) => <button key={path} className={activeFile === path ? "file-item active" : "file-item"} onClick={() => setActiveFile(path)} title={path}>{path.endsWith(".dart") ? <Braces size={15}/> : <FileText size={15}/>} {path.split("/").pop()}</button>)}
           </div>
-          <div className="side-note"><strong>Workspace</strong><br/>{status}<br/><br/>Autosave stores project files on this device. Use Backup project to keep a portable JSON copy. AI provider switching preserves this workspace and the recent conversation. Login UI starter is not real authentication until a provider is configured.</div>
+          <div className="side-note"><strong>Workspace</strong><br/>{status}<br/><br/>Local autosave and JSON backup are available. Use Account to sign in, then Cloud save/load for server-backed projects. The platform administrator must configure the database and auth providers.</div>
+          {cloudStatus && <div className="side-note" role="status">{cloudStatus}</div>}
           {importMessage && <div className="side-note" role="status">{importMessage}</div>}
           <div className="explorer-actions">
             <button className="btn" onClick={saveLocally}><Save size={14}/> Save workspace</button>
@@ -631,7 +714,7 @@ export default function HomePage() {
 
         <section className="panel preview-panel">
           <div className="panel-head"><span><Smartphone size={15} style={{display:"inline",marginRight:7,verticalAlign:"middle"}}/>Live app preview</span><span className="panel-sub">Instant draft</span></div>
-          <LivePreview code={code} fileName={activeFile} />
+          <RuntimePreview files={files} code={code} fileName={activeFile} />
           <div className="ai-box">
             <div style={{fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:7}}><Sparkles size={15}/> AI code assistant</div>
             <label className="ai-provider-label">AI provider
@@ -651,7 +734,7 @@ export default function HomePage() {
           </div>
         </section>
       </section>
-      <div className="footer-note">Governor Studio · Monaco editor · Automatic local project saving · JSON backup/import · AI provider selection with conversation continuity · APK builds run through GitHub Actions. True Flutter hot reload and real Google/GitHub authentication still require connected runtime/provider configuration.</div>
+      <div className="footer-note">Governor Studio · Local autosave and JSON backup · Cloud project APIs · AI code edits · Real Flutter runtime preview and per-project APK build are available when FLUTTER_RUNTIME_URL is deployed. Accounts and OAuth require administrator configuration.</div>
     </main>
   );
 }
