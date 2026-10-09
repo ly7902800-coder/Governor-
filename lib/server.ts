@@ -40,6 +40,13 @@ export async function db() {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS governor_projects_user_updated ON governor_projects(user_id, updated_at DESC);
+      CREATE TABLE IF NOT EXISTS governor_usage_limits (
+        user_id TEXT NOT NULL REFERENCES governor_users(id) ON DELETE CASCADE,
+        action TEXT NOT NULL,
+        window_start TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        count INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (user_id, action)
+      );
     `).then(() => undefined).catch((error) => { globalForGovernor.governorSchema = undefined; throw error; });
   }
   await globalForGovernor.governorSchema;
@@ -128,3 +135,18 @@ export function safeProvider(provider: string) {
   return provider as "google" | "github";
 }
 export function randomId() { return randomBytes(18).toString("base64url"); }
+
+export async function claimUsage(userId: string, action: "ai" | "flutter-build", windowSeconds: number, maxCount: number) {
+  const database = await db();
+  const result = await database.query(
+    `INSERT INTO governor_usage_limits (user_id,action,window_start,count)
+     VALUES ($1,$2,NOW(),1)
+     ON CONFLICT (user_id,action) DO UPDATE SET
+       count = CASE WHEN governor_usage_limits.window_start < NOW() - ($3 * INTERVAL '1 second') THEN 1 ELSE governor_usage_limits.count + 1 END,
+       window_start = CASE WHEN governor_usage_limits.window_start < NOW() - ($3 * INTERVAL '1 second') THEN NOW() ELSE governor_usage_limits.window_start END
+     WHERE governor_usage_limits.window_start < NOW() - ($3 * INTERVAL '1 second') OR governor_usage_limits.count < $4
+     RETURNING count`,
+    [userId, action, windowSeconds, maxCount],
+  );
+  if (!result.rows[0]) throw new Error("RATE_LIMITED");
+}
