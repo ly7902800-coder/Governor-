@@ -18,6 +18,7 @@ The web build passes CI, but external services are not live until the host confi
 Web host environment values:
 - `DATABASE_URL`: PostgreSQL connection string
 - `SESSION_SECRET`: random secret, at least 32 characters
+- `RESEND_API_KEY` and `EMAIL_FROM`: email verification and password recovery
 - `APP_BASE_URL`: public HTTPS app origin
 - `FLUTTER_RUNTIME_URL`: public HTTPS runtime origin
 - `RUNTIME_SHARED_SECRET`: same value on the web app and runtime
@@ -27,7 +28,7 @@ Web host environment values:
 The runtime service needs `RUNTIME_SHARED_SECRET` and `PUBLIC_RUNTIME_URL`. Never commit secrets or expose them in client-side variables.
 
 ## Authentication status
-Email accounts are marked unverified because email verification delivery and account recovery are not implemented yet. Add verification, recovery, rate limiting and monitoring before using this as a sensitive production identity service. OAuth requires the callback URLs in [runtime/README.md](runtime/README.md).
+Email registration now sends verification links and password reset uses expiring, single-use email links. Configure `RESEND_API_KEY` and `EMAIL_FROM` on the web server to enable both. OAuth requires the callback URLs in [runtime/README.md](runtime/README.md). Rate limiting is applied to shared AI and Flutter builds; add edge-level abuse protection and monitoring before a large public launch.
 
 ## Run locally
 Requires Node.js 20+:
