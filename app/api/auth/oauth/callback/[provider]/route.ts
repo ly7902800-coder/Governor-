@@ -37,14 +37,15 @@ export async function GET(request: Request, context: { params: Promise<{ provide
     let displayName = typeof profile.name === "string" ? profile.name : typeof profile.login === "string" ? profile.login : "Governor user";
     const providerId = String(provider === "google" ? profile.sub || "" : profile.id || "");
     let verified = provider === "google" ? profile.email_verified === true : false;
-    if (provider === "github" && !email) {
+    if (provider === "github") {
       const emailsResponse = await fetch("https://api.github.com/user/emails",{headers:{Authorization:`Bearer ${accessToken}`,Accept:"application/vnd.github+json","User-Agent":"Governor-Studio"}});
       const emails = await emailsResponse.json();
       if (emailsResponse.ok && Array.isArray(emails)) {
         const primary = emails.find((item: {primary?:boolean;verified?:boolean;email?:string})=>item.primary && item.verified && typeof item.email==="string");
         if (primary) { email=primary.email.toLowerCase(); verified=true; }
-      }
-    } else if (provider === "github") verified = Boolean(email);
+        else { email=""; verified=false; }
+      } else { email=""; verified=false; }
+    }
     if (!email || !verified || !providerId) return fail("A verified email is required for sign-in.");
     if (!process.env.DATABASE_URL || !process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) return fail("Account database or session secret is not configured.");
     const database = await db();
