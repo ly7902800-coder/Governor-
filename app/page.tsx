@@ -100,6 +100,9 @@ export default function HomePage() {
   const [status, setStatus] = useState("Ready");
   const [saved, setSaved] = useState(true);
   const [hydrated, setHydrated] = useState(false);
+  const [newFileName, setNewFileName] = useState("");
+  const [showNewFile, setShowNewFile] = useState(false);
+  const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
     try {
