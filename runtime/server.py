@@ -49,7 +49,7 @@ def clean_files(files: dict[str, str]):
     if "lib/main.dart" not in cleaned:
         raise HTTPException(400, "Project must include lib/main.dart.")
     manifest = cleaned.get("pubspec.yaml", "")
-    if re.search(r"(?m)^\\s*(git|path)\\s*:", manifest) or re.search(r"(?m)^\\s*(dependency_overrides|hooks|scripts)\\s*:", manifest):
+    if re.search(r"(?m)^\s*(git|path)\s*:", manifest) or re.search(r"(?m)^\s*(dependency_overrides|hooks|scripts)\s*:", manifest):
         raise HTTPException(400, "Git/path dependencies and custom build hooks are blocked by the hosted build service.")
     return cleaned
 
