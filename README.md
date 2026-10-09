@@ -6,11 +6,11 @@ A phone-friendly cloud development workspace for Flutter projects.
 - Next.js + TypeScript web workspace with Monaco code editor.
 - Flutter starter app under `flutter_template/`.
 - GitHub Actions workflow that builds a real Android APK and uploads it as an artifact.
-- AI provider selector (OpenRouter, OpenAI, Gemini, Anthropic), server-side readiness status, and recent conversation context preserved when switching providers.
+- AI provider selector (OpenRouter, OpenAI, Gemini, Anthropic), server-side readiness status, and recent conversation context preserved when switching providers. When configured, AI can return structured full-file edits that are applied to the current browser workspace.
 - Automatic browser-local project saving, JSON backup export/import, and recent AI conversation persistence.
 
 ## Important status
-The APK workflow builds the included starter Flutter app, not every unsaved browser workspace file. The editor currently provides a source-based visual draft, not a real Flutter Engine preview. True interactive preview of arbitrary edited Dart requires a separately deployed, sandboxed Flutter Web compilation/runtime service and a project-sync API. The editor autosaves locally in the same browser; JSON backup/import moves projects between devices. It does not yet provide remote cloud storage or GitHub synchronization.
+The APK workflow builds the included starter Flutter app, not every unsaved browser workspace file. The editor currently provides a source-based visual draft, not a real Flutter Engine preview. AI-generated edits are applied to browser workspace files when the selected provider returns the required structured JSON; the workspace is still local until exported. True interactive preview of arbitrary edited Dart requires a separately deployed, sandboxed Flutter Web compilation/runtime service and a project-sync API. The editor autosaves locally in the same browser; JSON backup/import moves projects between devices. It does not yet provide remote cloud storage or GitHub synchronization.
 
 Real email/password authentication requires a secure backend and persistent user database. Google and GitHub sign-in additionally require OAuth application configuration and redirect URLs; these cannot be made real for arbitrary apps without provider setup. The Login UI starter is explicitly a UI template, not live authentication.
 
