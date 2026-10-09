@@ -1,29 +1,43 @@
-# Cloud Flutter Studio
+# Governor Studio
 
-A phone-friendly cloud development workspace for Flutter projects.
+Phone-friendly Flutter development workspace with a Monaco editor and AI coding assistant.
 
-## Current foundation
-- Next.js + TypeScript web workspace with Monaco code editor.
-- Flutter starter app under `flutter_template/`.
-- GitHub Actions workflow that builds a real Android APK and uploads it as an artifact.
-- AI provider selector (OpenRouter, OpenAI, Gemini, Anthropic), server-side readiness status, and recent conversation context preserved when switching providers. When configured, AI can return structured full-file edits that are applied to the current browser workspace.
-- Automatic browser-local project saving, JSON backup export/import, and recent AI conversation persistence.
+## Implemented source features
+- AI provider router for OpenRouter, OpenAI, Gemini and Anthropic, with structured file edits applied to the current editor workspace.
+- Browser autosave and JSON backup import/export.
+- PostgreSQL-backed account and cloud-project APIs.
+- Email/password registration and sign-in with hashed passwords and signed HttpOnly session cookies.
+- Google and GitHub OAuth routes, plus Account Center at `/account`.
+- Cloud save/load controls in the editor.
+- Dockerized Flutter runtime in `runtime/` for real Flutter Web compilation and APK builds from the current workspace.
+- GitHub Actions workflow that builds the included starter Flutter APK.
 
-## Important status
-The APK workflow builds the included starter Flutter app, not every unsaved browser workspace file. The editor currently provides a source-based visual draft, not a real Flutter Engine preview. AI-generated edits are applied to browser workspace files when the selected provider returns the required structured JSON; the workspace is still local until exported. True interactive preview of arbitrary edited Dart requires a separately deployed, sandboxed Flutter Web compilation/runtime service and a project-sync API. The editor autosaves locally in the same browser; JSON backup/import moves projects between devices. It does not yet provide remote cloud storage or GitHub synchronization.
+## Hosted services must be configured
+The web build passes CI, but external services are not live until the host configures them. See [runtime deployment guide](runtime/README.md).
 
-Real email/password authentication requires a secure backend and persistent user database. Google and GitHub sign-in additionally require OAuth application configuration and redirect URLs; these cannot be made real for arbitrary apps without provider setup. The Login UI starter is explicitly a UI template, not live authentication.
+Web host environment values:
+- `DATABASE_URL`: PostgreSQL connection string
+- `SESSION_SECRET`: random secret, at least 32 characters
+- `APP_BASE_URL`: public HTTPS app origin
+- `FLUTTER_RUNTIME_URL`: public HTTPS runtime origin
+- `RUNTIME_SHARED_SECRET`: same value on the web app and runtime
+- Optional AI provider keys: `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`
+- OAuth credentials: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
 
-## Run the web workspace
-Use Node.js 20+:
+The runtime service needs `RUNTIME_SHARED_SECRET` and `PUBLIC_RUNTIME_URL`. Never commit secrets or expose them in client-side variables.
+
+## Authentication status
+Email accounts are marked unverified because email verification delivery and account recovery are not implemented yet. Add verification, recovery, rate limiting and monitoring before using this as a sensitive production identity service. OAuth requires the callback URLs in [runtime/README.md](runtime/README.md).
+
+## Run locally
+Requires Node.js 20+:
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Build APK
-Open **Actions → Build Flutter APK → Run workflow**. Download `cloud-flutter-studio-apk` from the successful run's artifacts.
+## Build starter APK
+Open **Actions → Build Flutter APK → Run workflow**, then download `cloud-flutter-studio-apk` from a successful run.
 
-## Optional AI providers
-Configure server-side environment variables in the deployed web service: `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, and/or `ANTHROPIC_API_KEY`. Optional model overrides: `OPENROUTER_MODEL`, `OPENAI_MODEL`, `GEMINI_MODEL`, and `ANTHROPIC_MODEL`. The `/api/ai` GET endpoint reports which providers are configured without exposing secrets. GitHub repository secrets are not automatically available to a running website unless the deployment pipeline explicitly maps them into its server environment. Never put keys in client-side code or commit them to Git.
+AI provider keys must be set on the server environment; GitHub Actions secrets are not automatically available to a deployed website.
