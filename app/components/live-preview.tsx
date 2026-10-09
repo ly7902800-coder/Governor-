@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import { Smartphone, Tablet, Monitor, RotateCw, Sun, Moon, ZoomIn, ZoomOut, AlertTriangle, Zap, RefreshCw } from "lucide-react";
 
 type Device = "phone" | "tablet" | "web";
@@ -59,7 +60,7 @@ export default function LivePreview({ code, fileName }: { code: string; fileName
   const foreground = darkMode ? "#f4f5fb" : "#202437";
   const muted = darkMode ? "#a7afc3" : "#70778b";
   const deviceClass = device === "phone" ? "live-device phone-device" : device === "tablet" ? "live-device tablet-device" : "live-device web-device";
-  const previewStyle = { "--live-accent": parsed.accent, "--live-bg": background, "--live-surface": surface, "--live-text": foreground, "--live-muted": muted, "--live-zoom": zoom / 100 } as React.CSSProperties;
+  const previewStyle = { "--live-accent": parsed.accent, "--live-bg": background, "--live-surface": surface, "--live-text": foreground, "--live-muted": muted, "--live-zoom": zoom / 100 } as CSSProperties;
 
   return (
     <div className="live-preview-wrap">
