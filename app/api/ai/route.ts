@@ -121,9 +121,9 @@ export async function POST(request: Request) {
       : [];
     if (!prompt) return NextResponse.json({ error: "Enter a prompt first." }, { status: 400 });
     const conversationPrompt = history.length
-      ? "Recent conversation (preserve its context when answering):\\n" +
-        history.map((item) => `${item.role.toUpperCase()}: ${item.content}`).join("\\n\\n") +
-        "\\n\\nCurrent request:\\n" + prompt
+      ? "Recent conversation (preserve its context when answering):\n" +
+        history.map((item) => `${item.role.toUpperCase()}: ${item.content}`).join("\n\n") +
+        "\n\nCurrent request:\n" + prompt
       : prompt;
 
     const providers: Provider[] = requested === "openrouter" || requested === "openai" || requested === "gemini" || requested === "anthropic"
