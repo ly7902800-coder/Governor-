@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import LivePreview from "./components/live-preview";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Code2, FolderTree, Smartphone, Sparkles, PackageCheck, Play, Save,
+  Code2, FolderTree, Smartphone, Sparkles, PackageCheck, Play, Save, ShieldCheck,
   FileCode2, TerminalSquare, ExternalLink, Download, RotateCcw,
   CheckCircle2, FileText, Braces, ChevronRight
 } from "lucide-react";
