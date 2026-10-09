@@ -333,7 +333,7 @@ export default function HomePage() {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const parsed = JSON.parse(String(reader.result)) as { files?: Record<string, unknown> };
+        const parsed = JSON.parse(String(reader.result)) as { files?: Record<string, unknown>; aiMessages?: Array<{ role: string; content: string }>; provider?: string };
         if (!parsed.files || typeof parsed.files !== "object" || typeof parsed.files["lib/main.dart"] !== "string") {
           throw new Error("This file is not a valid Governor project backup.");
         }
