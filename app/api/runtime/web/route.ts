@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { cleanFiles } from "../../../../lib/server";
+import { cleanFiles, currentUser, claimUsage } from "../../../../lib/server";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
+  let user;
+  try { user = await currentUser(); } catch { return NextResponse.json({ error: "Account service is unavailable." }, { status: 503 }); }
+  if (!user) return NextResponse.json({ error: "Sign in before compiling a Flutter preview." }, { status: 401 });
+  try { await claimUsage(user.id, "flutter-build", 20, 1); } catch (error) { return NextResponse.json({ error: error instanceof Error && error.message === "RATE_LIMITED" ? "Please wait 20 seconds between Flutter builds." : "Build quota check failed." }, { status: error instanceof Error && error.message === "RATE_LIMITED" ? 429 : 503 }); }
   const base = process.env.FLUTTER_RUNTIME_URL?.replace(/\/$/, "");
   const secret = process.env.RUNTIME_SHARED_SECRET;
   if (!base || !secret || secret.length < 32) return NextResponse.json({ error: "Real Flutter runtime is not deployed/configured. Set FLUTTER_RUNTIME_URL and RUNTIME_SHARED_SECRET on the web server." }, { status: 503 });
