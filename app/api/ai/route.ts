@@ -58,7 +58,7 @@ async function callGemini(prompt: string, code: string) {
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts: [{ text: `You are a careful Flutter/Dart coding assistant.\nRequest: ${prompt}\n\nCurrent project workspace (JSON object mapping relative file paths to full contents):\n${code}` }] }] })
+    body: JSON.stringify({ contents: [{ parts: [{ text: `${systemPrompt}\n\nRequest: ${prompt}\n\nCurrent project workspace (JSON object mapping relative file paths to full contents):\n${code}` }] }] })
   });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error?.message || "Gemini request failed.");
@@ -74,7 +74,7 @@ async function callAnthropic(prompt: string, code: string) {
     body: JSON.stringify({
       model: process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest",
       max_tokens: 1800,
-      messages: [{ role: "user", content: `You are a careful Flutter/Dart coding assistant.\nRequest: ${prompt}\n\nCurrent project workspace (JSON object mapping relative file paths to full contents):\n${code}` }]
+      messages: [{ role: "user", content: `${systemPrompt}\n\nRequest: ${prompt}\n\nCurrent project workspace (JSON object mapping relative file paths to full contents):\n${code}` }]
     })
   });
   const data = await response.json();
