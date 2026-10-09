@@ -434,9 +434,7 @@ const tools: ToolItem[] = [
     url: "https://playwright.dev/",
     action: "Open Playwright",
     tags: ["E2E", "Browser tests", "CI"]
-  }
-];
-
+  },
   {
     id: "gemini-web",
     name: "Google Gemini (web app)",
@@ -463,6 +461,8 @@ const tools: ToolItem[] = [
     action: "Open ChatGPT",
     tags: ["OpenAI", "Sign-in", "No API key", "Web app"]
   },
+];
+
 const categories: ToolCategory[] = [
   "All",
   "AI & Agents",
