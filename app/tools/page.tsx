@@ -437,6 +437,32 @@ const tools: ToolItem[] = [
   }
 ];
 
+  {
+    id: "gemini-web",
+    name: "Google Gemini (web app)",
+    category: "AI & Agents",
+    description: "Use Google's consumer Gemini assistant directly in the browser with a Google account, without configuring a Gemini API key in Governor.",
+    publisher: "Official",
+    integration: "Quick launch",
+    connection: "Opens the official Gemini website. This is a browser-based sign-in route, not an API connection or an embedded assistant inside Governor.",
+    requirement: "Sign in on Gemini's website. Programmatic requests from Governor still require a supported backend integration and credentials.",
+    url: "https://gemini.google.com/",
+    action: "Open Gemini",
+    tags: ["Google", "Sign-in", "No API key", "Web app"]
+  },
+  {
+    id: "chatgpt-web",
+    name: "ChatGPT (web app)",
+    category: "AI & Agents",
+    description: "Open the official ChatGPT website and use the service through its own sign-in flow rather than configuring an API key in Governor.",
+    publisher: "Official",
+    integration: "Quick launch",
+    connection: "Official web shortcut only. It does not connect ChatGPT's API to the Governor editor or share your project automatically.",
+    requirement: "Sign in on ChatGPT's website. Embedding model calls in Governor is a separate integration and may require API credentials.",
+    url: "https://chatgpt.com/",
+    action: "Open ChatGPT",
+    tags: ["OpenAI", "Sign-in", "No API key", "Web app"]
+  },
 const categories: ToolCategory[] = [
   "All",
   "AI & Agents",
@@ -510,7 +536,7 @@ export default function ToolsPage() {
         <div className="tools-connection-stat"><KeyRound size={18}/><strong>{setupCount}</strong><span>items that need account, key, or IDE setup</span></div>
       </section>
 
-      <div className="tools-honest-note"><strong>Important — real connection status:</strong> These tools are connected to Governor Studio's toolbox through working launch/setup links. That does not mean their APIs, accounts, desktop extensions, or cloud deployments are already authenticated or running inside Governor. Live API connections need a backend adapter and the relevant secret; desktop extensions must be installed in their own IDE.</div>
+      <div className="tools-honest-note"><strong>Important — real connection status:</strong> These tools are connected to Governor Studio's toolbox through working launch/setup links. To use a provider without an API key, open its official web app and sign in there (for example, Gemini or ChatGPT). This does not embed that provider inside Governor. Live programmatic API calls need a backend adapter and the provider's supported credentials or OAuth flow; desktop extensions must be installed in their own IDE.</div>
 
       <section className="tools-controls">
         <label className="tools-search"><Search size={17}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search Perplexity, Google, Cursor, fonts, API, Flutter…"/></label>
