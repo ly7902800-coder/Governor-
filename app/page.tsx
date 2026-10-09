@@ -264,6 +264,7 @@ export default function HomePage() {
   const [provider, setProvider] = useState<"auto" | "openrouter" | "openai" | "gemini" | "anthropic">("auto");
   const [aiMessages, setAiMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
   const [importMessage, setImportMessage] = useState("");
+  const [providerAvailability, setProviderAvailability] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     try {
@@ -306,6 +307,24 @@ export default function HomePage() {
     }
   }, [files, aiMessages, provider, hydrated]);
 
+  useEffect(() => {
+    let active = true;
+    fetch("/api/ai")
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Provider status unavailable")))
+      .then((data) => {
+        if (!active || !Array.isArray(data.providers)) return;
+        const statusMap: Record<string, boolean> = {};
+        for (const item of data.providers) {
+          if (item && typeof item.id === "string") statusMap[item.id] = item.configured === true;
+        }
+        setProviderAvailability(statusMap);
+      })
+      .catch(() => {
+        if (active) setProviderAvailability({});
+      });
+    return () => { active = false; };
+  }, []);
+
   const code = files[activeFile] ?? "";
   const lineCount = useMemo(() => code.split("\n").length, [code]);
   const fileCount = Object.keys(files).length;
@@ -344,6 +363,9 @@ export default function HomePage() {
         }
         if (!nextFiles["lib/main.dart"]) throw new Error("The backup does not include lib/main.dart.");
         setFiles({ ...starterFiles, ...nextFiles });
+        if (parsed.provider === "auto" || parsed.provider === "openrouter" || parsed.provider === "openai" || parsed.provider === "gemini" || parsed.provider === "anthropic") {
+          setProvider(parsed.provider);
+        }
         if (Array.isArray(parsed.aiMessages)) {
           setAiMessages(parsed.aiMessages.filter((item: any) =>
             item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string"
@@ -582,10 +604,10 @@ export default function HomePage() {
             <label className="ai-provider-label">AI provider
               <select value={provider} onChange={(event) => setProvider(event.target.value as typeof provider)} aria-label="AI provider">
                 <option value="auto">Auto (try configured providers)</option>
-                <option value="openrouter">OpenRouter</option>
-                <option value="openai">OpenAI</option>
-                <option value="gemini">Google Gemini</option>
-                <option value="anthropic">Anthropic Claude</option>
+                <option value="openrouter">OpenRouter {providerAvailability.openrouter ? "· connected" : "· not configured"}</option>
+                <option value="openai">OpenAI {providerAvailability.openai ? "· connected" : "· not configured"}</option>
+                <option value="gemini">Google Gemini {providerAvailability.gemini ? "· connected" : "· not configured"}</option>
+                <option value="anthropic">Anthropic Claude {providerAvailability.anthropic ? "· connected" : "· not configured"}</option>
               </select>
             </label>
             <p className="ai-context-note">Switching providers keeps your files and conversation. A provider must be configured securely on the server before requests can work.</p>
