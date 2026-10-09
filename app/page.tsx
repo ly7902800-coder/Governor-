@@ -248,10 +248,18 @@ export default function HomePage() {
       <section className="workspace">
         <aside className="panel files-panel">
           <div className="panel-head"><span><FolderTree size={15} style={{display:"inline",marginRight:7,verticalAlign:"middle"}}/>Explorer</span><span className="panel-sub">{fileCount} files</span></div>
-          <div className="tree-root"><ChevronRight size={13}/><span>flutter_template</span></div>
+          <div className="explorer-actions">
+            <button className="btn" onClick={() => setShowNewFile((value) => !value)}><FileCode2 size={14}/> New file</button>
+            <button className="btn" onClick={downloadAllFiles}><Download size={14}/> Export all</button>
+          </div>
+          {showNewFile && <form className="new-file-form" onSubmit={(event) => { event.preventDefault(); createFile(); }}>
+            <label htmlFor="new-file-name">File path</label>
+            <input id="new-file-name" value={newFileName} onChange={(event) => setNewFileName(event.target.value)} placeholder="lib/home.dart" autoComplete="off" />
+            <button className="btn primary" type="submit" disabled={!newFileName.trim()}>Create file</button>
+          </form>}
+          <div className="tree-root"><ChevronRight size={13}/><span>Workspace files</span></div>
           <div className="file-list">
-            <button className={activeFile === "lib/main.dart" ? "file-item active" : "file-item"} onClick={() => setActiveFile("lib/main.dart")}><Braces size={15}/> main.dart</button>
-            <button className={activeFile === "pubspec.yaml" ? "file-item active" : "file-item"} onClick={() => setActiveFile("pubspec.yaml")}><FileText size={15}/> pubspec.yaml</button>
+            {Object.keys(files).map((path) => <button key={path} className={activeFile === path ? "file-item active" : "file-item"} onClick={() => setActiveFile(path)} title={path}>{path.endsWith(".dart") ? <Braces size={15}/> : <FileText size={15}/>} {path.split("/").pop()}</button>)}
           </div>
           <div className="side-note"><strong>Workspace</strong><br/>{status}<br/><br/>Files are saved in this browser only. They are not yet synchronized back to GitHub automatically.</div>
           <div className="explorer-actions">
@@ -275,9 +283,15 @@ export default function HomePage() {
             <div className="toolbar-buttons">
               <button className="btn" onClick={saveLocally} title="Save on this device"><Save size={14}/> Save</button>
               <button className="btn" onClick={downloadFile} title="Download current file"><Download size={14}/> Export</button>
+              {!starterFiles[activeFile] && <button className="btn icon-btn" onClick={removeActiveFile} title="Remove current file"><RotateCcw size={14}/></button>}
               <button className="btn icon-btn" onClick={resetFile} title="Restore starter content"><RotateCcw size={14}/></button>
             </div>
           </div>
+          <div className="editor-search">
+            <input aria-label="Search current file" value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Search in current file…" />
+            {searchText && <span>{code.split(searchText).length - 1} matches</span>}
+          </div>
+          {searchText && <div className="search-results">{code.split("\n").map((line, index) => ({ line, number: index + 1 })).filter((item) => item.line.toLowerCase().includes(searchText.toLowerCase())).slice(0, 15).map((item) => <button key={item.number} onClick={() => setStatus("Found text on line " + item.number)}><span>{item.number}</span>{item.line || "(empty line)"}</button>)}</div>}
           <div className="editor-slot">
             <Editor
               height="100%"
