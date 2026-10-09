@@ -4,6 +4,9 @@ on:
   push:
     paths:
       - "app/**"
+      - "lib/**"
+      - "runtime/**"
+      - "README.md"
       - "package.json"
       - "package-lock.json"
       - "tsconfig.json"
