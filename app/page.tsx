@@ -588,7 +588,7 @@ export default function HomePage() {
             if (changedPaths.length) {
               setFiles((current) => ({ ...current, ...accepted }));
               if (accepted[activeFile] !== undefined) {
-                setStatus("AI updated " + changedPaths.length + " project file(s); preview refreshed");
+                setStatus("AI updated " + changedPaths.length + " project file(s); rebuild the Flutter preview to apply changes");
               } else {
                 setStatus("AI updated " + changedPaths.length + " project file(s)");
               }
