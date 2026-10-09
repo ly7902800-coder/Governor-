@@ -241,6 +241,7 @@ export default function HomePage() {
       <header className="topbar">
         <div className="brand"><span className="brand-mark"><Code2 size={20} /></span><span>Governor Studio</span></div>
         <div className="top-actions">
+          <a className="btn" href="/tools"><Sparkles size={14}/> Tools Marketplace</a>
           <span className="pill"><span className="dot" /> {hydrated ? (saved ? "Saved locally" : "Unsaved edits") : "Loading workspace"}</span>
           <a className="btn primary" href="https://github.com/ly7902800-coder/Governor-/actions/workflows/build-apk.yml" target="_blank" rel="noreferrer"><PackageCheck size={15}/> Build APK <ExternalLink size={12}/></a>
         </div>
