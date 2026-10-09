@@ -87,7 +87,162 @@ flutter:
 `
 };
 
-const loginStarter = "import 'package:flutter/material.dart';\n\nvoid main() => runApp(const LoginStarterApp());\n\nclass LoginStarterApp extends StatelessWidget {\n  const LoginStarterApp({super.key});\n\n  @override\n  Widget build(BuildContext context) => MaterialApp(\n    title: 'My App',\n    debugShowCheckedModeBanner: false,\n    theme: ThemeData(\n      useMaterial3: true,\n      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7568E8)),\n      inputDecorationTheme: InputDecorationTheme(\n        filled: true,\n        fillColor: const Color(0xFFF4F2FC),\n        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),\n      ),\n    ),\n    home: const LoginPage(),\n  );\n}\n\nclass LoginPage extends StatefulWidget {\n  const LoginPage({super.key});\n  @override\n  State<LoginPage> createState() => _LoginPageState();\n}\n\nclass _LoginPageState extends State<LoginPage> {\n  final _formKey = GlobalKey<FormState>();\n  final _emailController = TextEditingController();\n  final _passwordController = TextEditingController();\n  bool _hidePassword = true;\n  bool _showWelcome = false;\n\n  @override\n  void dispose() {\n    _emailController.dispose();\n    _passwordController.dispose();\n    super.dispose();\n  }\n\n  void _submit() {\n    if (!_formKey.currentState!.validate()) return;\n    setState(() => _showWelcome = true);\n    ScaffoldMessenger.of(context).showSnackBar(\n      const SnackBar(content: Text('Demo only: connect a real authentication backend before release.')),\n    );\n  }\n\n  @override\n  Widget build(BuildContext context) {\n    if (_showWelcome) {\n      return Scaffold(\n        appBar: AppBar(\n          title: const Text('My App'),\n          actions: [IconButton(tooltip: 'Sign out of demo', onPressed: () => setState(() => _showWelcome = false), icon: const Icon(Icons.logout))],\n        ),\n        body: Center(\n          child: Padding(\n            padding: const EdgeInsets.all(24),\n            child: Column(mainAxisSize: MainAxisSize.min, children: [\n              const Icon(Icons.check_circle_rounded, size: 72, color: Color(0xFF7568E8)),\n              const SizedBox(height: 16),\n              Text('Welcome!', style: Theme.of(context).textTheme.headlineMedium),\n              const SizedBox(height: 8),\n              Text(_emailController.text, textAlign: TextAlign.center),\n              const SizedBox(height: 12),\n              const Text('This is a local UI prototype. It does not create an account or verify a password online.', textAlign: TextAlign.center),\n            ]),\n          ),\n        ),\n      );\n    }\n\n    return Scaffold(\n      body: SafeArea(\n        child: Center(\n          child: SingleChildScrollView(\n            padding: const EdgeInsets.all(24),\n            child: ConstrainedBox(\n              constraints: const BoxConstraints(maxWidth: 430),\n              child: Form(\n                key: _formKey,\n                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [\n                  const SizedBox(height: 24),\n                  Container(\n                    width: 76, height: 76, alignment: Alignment.center,\n                    decoration: BoxDecoration(color: const Color(0xFF7568E8).withOpacity(0.12), borderRadius: BorderRadius.circular(24)),\n                    child: const Icon(Icons.lock_outline_rounded, size: 38, color: Color(0xFF7568E8)),\n                  ),\n                  const SizedBox(height: 28),\n                  Text('Welcome back', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),\n                  const SizedBox(height: 8),\n                  Text('Sign in to continue to your app.', style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black54)),\n                  const SizedBox(height: 28),\n                  TextFormField(\n                    controller: _emailController,\n                    keyboardType: TextInputType.emailAddress,\n                    autofillHints: const [AutofillHints.username, AutofillHints.email],\n                    decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),\n                    validator: (value) {\n                      final email = value?.trim() ?? '';\n                      if (!email.contains('@') || !email.contains('.')) return 'Enter a valid email address';\n                      return null;\n                    },\n                  ),\n                  const SizedBox(height: 14),\n                  TextFormField(\n                    controller: _passwordController,\n                    obscureText: _hidePassword,\n                    autofillHints: const [AutofillHints.password],\n                    decoration: InputDecoration(\n                      labelText: 'Password',\n                      prefixIcon: const Icon(Icons.lock_outline),\n                      suffixIcon: IconButton(\n                        onPressed: () => setState(() => _hidePassword = !_hidePassword),\n                        icon: Icon(_hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),\n                      ),\n                    ),\n                    validator: (value) => (value ?? '').length < 6 ? 'Use at least 6 characters for this demo' : null,\n                  ),\n                  Align(\n                    alignment: Alignment.centerRight,\n                    child: TextButton(\n                      onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password recovery needs a real authentication backend.'))),\n                      child: const Text('Forgot password?'),\n                    ),\n                  ),\n                  const SizedBox(height: 8),\n                  FilledButton(\n                    onPressed: _submit,\n                    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),\n                    child: const Text('Sign in'),\n                  ),\n                  const SizedBox(height: 18),\n                  OutlinedButton.icon(\n                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google sign-in needs OAuth/Firebase project setup.'))),\n                    icon: const Icon(Icons.g_mobiledata_rounded, size: 28),\n                    label: const Text('Continue with Google'),\n                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),\n                  ),\n                  const SizedBox(height: 20),\n                  const Text('Prototype only — no API key is needed to preview this screen. Real sign-in requires a secure authentication provider.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.black54)),\n                ]),\n              ),\n            ),\n          ),\n        ),\n      ),\n    );\n  }\n}\n";
+const loginStarter = `import 'package:flutter/material.dart';
+
+void main() => runApp(const LoginStarterApp());
+
+class LoginStarterApp extends StatelessWidget {
+  const LoginStarterApp({super.key});
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    title: 'My App',
+    debugShowCheckedModeBanner: false,
+    theme: ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7568E8)),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFFF4F2FC),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+      ),
+    ),
+    home: const LoginPage(),
+  );
+}
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _hidePassword = true;
+  bool _showWelcome = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _showWelcome = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Demo only: connect a real authentication backend before release.')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_showWelcome) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('My App'),
+          actions: [IconButton(tooltip: 'Sign out of demo', onPressed: () => setState(() => _showWelcome = false), icon: const Icon(Icons.logout))],
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.check_circle_rounded, size: 72, color: Color(0xFF7568E8)),
+              const SizedBox(height: 16),
+              Text('Welcome!', style: Theme.of(context).textTheme.headlineMedium),
+              const SizedBox(height: 8),
+              Text(_emailController.text, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              const Text('This is a local UI prototype. It does not create an account or verify a password online.', textAlign: TextAlign.center),
+            ]),
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 430),
+              child: Form(
+                key: _formKey,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  const SizedBox(height: 24),
+                  Container(
+                    width: 76, height: 76, alignment: Alignment.center,
+                    decoration: BoxDecoration(color: const Color(0xFF7568E8).withOpacity(0.12), borderRadius: BorderRadius.circular(24)),
+                    child: const Icon(Icons.lock_outline_rounded, size: 38, color: Color(0xFF7568E8)),
+                  ),
+                  const SizedBox(height: 28),
+                  Text('Welcome back', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 8),
+                  Text('Sign in to continue to your app.', style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black54)),
+                  const SizedBox(height: 28),
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.username, AutofillHints.email],
+                    decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
+                    validator: (value) {
+                      final email = value?.trim() ?? '';
+                      if (!email.contains('@') || !email.contains('.')) return 'Enter a valid email address';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _hidePassword,
+                    autofillHints: const [AutofillHints.password],
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(() => _hidePassword = !_hidePassword),
+                        icon: Icon(_hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                      ),
+                    ),
+                    validator: (value) => (value ?? '').length < 6 ? 'Use at least 6 characters for this demo' : null,
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password recovery needs a real authentication backend.'))),
+                      child: const Text('Forgot password?'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton(
+                    onPressed: _submit,
+                    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                    child: const Text('Sign in'),
+                  ),
+                  const SizedBox(height: 18),
+                  OutlinedButton.icon(
+                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google sign-in needs OAuth/Firebase project setup.'))),
+                    icon: const Icon(Icons.g_mobiledata_rounded, size: 28),
+                    label: const Text('Continue with Google'),
+                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text('Prototype only — no API key is needed to preview this screen. Real sign-in requires a secure authentication provider.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.black54)),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+`;
 
 const fileLanguage: Record<string, string> = {
   "lib/main.dart": "dart",
