@@ -21,8 +21,21 @@ export default function AccountPage() {
       const response=await fetch(mode==="login"?"/api/auth/login":"/api/auth/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password,displayName})});
       const data=await response.json();
       if(!response.ok) throw new Error(data.error||"Account request failed.");
-      setUser(data.user); setNotice(data.emailVerificationRequired?"Account created. Email verification is not yet enabled on this deployment.": "Signed in successfully.");
+      if (data.emailVerificationRequired) { setUser(null); setNotice(data.message || "Check your inbox to verify your email before signing in."); }
+      else { setUser(data.user); setNotice("Signed in successfully."); }
     } catch(e) { setError(e instanceof Error?e.message:"Account request failed."); }
+    finally {setBusy(false);}
+  }
+  async function requestEmailAction(path:string) {
+    setError(""); setNotice("");
+    if (!email.trim()) { setError("Enter your email address first."); return; }
+    setBusy(true);
+    try {
+      const response=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});
+      const data=await response.json();
+      if(!response.ok) throw new Error(data.error||"Request failed.");
+      setNotice(data.message||"Request accepted. Check your inbox.");
+    } catch(e) { setError(e instanceof Error?e.message:"Request failed."); }
     finally {setBusy(false);}
   }
   async function logout(){await fetch("/api/auth/logout",{method:"POST"});setUser(null);setNotice("Signed out.");}
@@ -40,7 +53,8 @@ export default function AccountPage() {
       :<><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:18}}><a href="/api/auth/oauth/google" style={button}><Globe2 size={16}/> Google</a><a href="/api/auth/oauth/github" style={button}><Github size={16}/> GitHub</a></div><div style={{display:"flex",alignItems:"center",gap:12,color:"#77849c",fontSize:12,marginBottom:18}}><span style={{height:1,background:"#30394c",flex:1}}/>OR USE EMAIL<span style={{height:1,background:"#30394c",flex:1}}/></div>
         <div style={{display:"flex",gap:8,marginBottom:17}}><button style={{...button,background:mode==="login"?"#293b65":"#101521"}} onClick={()=>setMode("login")}>Sign in</button><button style={{...button,background:mode==="register"?"#293b65":"#101521"}} onClick={()=>setMode("register")}>Create account</button></div>
         <form onSubmit={submit} style={{display:"grid",gap:13}}>{mode==="register"&&<label style={{display:"grid",gap:7,fontSize:13,color:"#c2cbe0"}}>Display name<input style={field} value={displayName} onChange={e=>setDisplayName(e.target.value)} maxLength={80} autoComplete="name" placeholder="Your name"/></label>}<label style={{display:"grid",gap:7,fontSize:13,color:"#c2cbe0"}}><span style={{display:"flex",gap:7,alignItems:"center"}}><Mail size={14}/> Email address</span><input style={field} type="email" required value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" placeholder="you@example.com"/></label><label style={{display:"grid",gap:7,fontSize:13,color:"#c2cbe0"}}>Password<input style={field} type="password" required minLength={mode==="register"?10:1} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)} autoComplete={mode==="login"?"current-password":"new-password"} placeholder={mode==="register"?"At least 10 characters":"Your password"}/></label><button style={{...button,background:"#4265bd",borderColor:"#5579d1"}} disabled={busy||!configured}>{busy?<LoaderCircle size={16} className="spin"/>:null}{mode==="login"?"Sign in":"Create account"}</button></form>
-        <p style={{fontSize:12,lineHeight:1.65,color:"#9ba7bd",margin:"16px 0 0"}}>Google and GitHub sign-in require OAuth apps configured by the platform administrator. Email registration currently does not send verification emails or support password reset; do not use this deployment for sensitive accounts until email verification and recovery are configured.</p>
+        {mode==="login"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginTop:10}}><button style={{...button,fontSize:12}} onClick={()=>requestEmailAction("/api/auth/password-reset")} disabled={busy}>Forgot password?</button><button style={{...button,fontSize:12}} onClick={()=>requestEmailAction("/api/auth/verify/resend")} disabled={busy}>Resend verification</button></div>}
+        <p style={{fontSize:12,lineHeight:1.65,color:"#9ba7bd",margin:"16px 0 0"}}>Email verification and password recovery use the configured email delivery provider. Google and GitHub sign-in require OAuth apps configured by the platform administrator.</p>
       </>}
     </section>
     <footer style={{color:"#68758c",fontSize:12,marginTop:24}}>Governor Studio · Secure server-side sessions · PostgreSQL-backed accounts</footer>
